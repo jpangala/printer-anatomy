@@ -12,8 +12,8 @@ const G = await load("kit/lathe.mjs");
 const { kitScript } = await load("scripts/inline-kit.mjs");
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const theme = process.argv.includes("--light") ? "light" : "dark";
-const OUT = join(HERE, theme === "light" ? "printer-light.html" : "printer.html");
+const theme = process.argv.includes("--dark") ? "dark" : "light"; // the starting theme; the page has a toggle
+const OUT = join(HERE, "index.html");
 
 const WIDTH = 600;
 const HEIGHT = 540;
@@ -1051,6 +1051,10 @@ const css = `<style>
 .pr-screen{fill:var(--pr-screen);stroke:none}
 .pr-lcd-text{fill:var(--pr-screen-text);font-family:var(--anatomy-mono);letter-spacing:.02em}
 .iso-stage{outline:none}
+.pr-theme-row{display:flex;justify-content:flex-end;margin-bottom:-18px;position:relative;z-index:1}
+.pr-theme{appearance:none;border:0;background:transparent;color:var(--anatomy-muted);font:10.5px/1 var(--anatomy-mono);letter-spacing:.1em;text-transform:uppercase;padding:6px 0;cursor:pointer}
+.pr-theme:hover{color:var(--anatomy-strong)}
+.pr-theme:focus-visible{outline:1px solid var(--anatomy-muted);outline-offset:4px}
 @media (max-width:560px){.iso-plate{overflow:hidden}.iso-stage .iso-svg{width:122%;max-width:none;margin-left:-11%;margin-top:-4%;margin-bottom:-4%}}
 .iso-stage:focus-visible{outline:1px solid var(--anatomy-muted);outline-offset:6px}
 </style>`;
@@ -1068,5 +1072,18 @@ const body = k.plateHtml({
     "A bed-slinger printing a 64 mm square at 0.2 mm layers. The bed slides in Y, the head in X, and the beam climbs a layer at a time. The gear feeds 1.75 mm filament at about a thirtieth of the head's speed; the heater block melts it and the 0.4 mm nozzle lays it down as a 0.45 mm line. Hover to turn the speed dial: at 300 % the block is melting 98 % of what it can. Filament and nozzle are drawn about 1.4 times true size.",
   body: `<div class="iso-stage" tabindex="0" role="slider" aria-label="3D printer: arrow keys change the print speed" aria-valuemin="20" aria-valuemax="300" aria-valuenow="100">${svg}</div>`,
 });
-writeFileSync(OUT, k.pageHtml({ title: "3D printer", theme, body: css + body, script: kitScript() + live }));
+const toggle = `<div class="pr-theme-row"><button class="pr-theme" type="button" aria-label="Switch between light and dark theme" data-theme-toggle></button></div>`;
+const themeScript = `
+const root = document.body;
+const button = document.querySelector("[data-theme-toggle]");
+const paint = () => { button.textContent = root.dataset.theme === "dark" ? "Light" : "Dark"; };
+try { const saved = localStorage.getItem("printer-theme"); if (saved === "light" || saved === "dark") root.dataset.theme = saved; } catch {}
+button.addEventListener("click", () => {
+  root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+  try { localStorage.setItem("printer-theme", root.dataset.theme); } catch {}
+  paint();
+});
+paint();
+`;
+writeFileSync(OUT, k.pageHtml({ title: "3D printer", theme, body: css + toggle + body, script: kitScript() + live + themeScript }));
 console.log("wrote", OUT);
